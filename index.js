@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 var jwt = require("jsonwebtoken");
-const { query } = require("express");
+const { query, response } = require("express");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -19,6 +19,16 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+function verifyJWT(req, res, next) {
+  // console.log("token inside middleware", req.headers.authorization);
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.send(401).send("Unauthorized Access");
+  }
+
+  const token = authHeader.split(" ")[1];
+}
 
 async function run() {
   try {
@@ -102,7 +112,7 @@ async function run() {
       res.send(options);
     });
 
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", verifyJWT, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const bookings = await bookingsCollection.find(query).toArray();
