@@ -49,6 +49,13 @@ async function run() {
     const usersCollection = client.db("doctorsPortal").collection("users");
     const doctorsCollection = client.db("doctorsPortal").collection("doctors");
 
+    // middleware
+    // NOTE: make sure you use verifyAdmin after verifyJWT
+    const verifyAdmin = (req, res, next) => {
+      console.log("inside verifyAdmin", req.decoded.email);
+      next();
+    };
+
     app.get("/appointmentOptions", async (req, res) => {
       const date = req.query.date;
       console.log(date);
@@ -216,15 +223,22 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/doctors", async (req, res) => {
+    app.get("/doctors", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const doctors = await doctorsCollection.find(query).toArray();
       res.send(doctors);
     });
 
-    app.post("/doctors", async (req, res) => {
+    app.post("/doctors", verifyJWT, async (req, res) => {
       const doctors = req.body;
       const result = await doctorsCollection.insertOne(doctors);
+      res.send(result);
+    });
+
+    app.delete("/doctors/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await doctorsCollection.deleteOne(filter);
       res.send(result);
     });
   } finally {
