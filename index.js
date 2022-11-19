@@ -111,6 +111,7 @@ async function run() {
           {
             $project: {
               name: 1,
+              price: 1,
               slots: 1,
               booked: {
                 $map: {
@@ -124,6 +125,7 @@ async function run() {
           {
             $project: {
               name: 1,
+              price: 1,
               slots: {
                 $setDifference: ["$slots", "$booked"],
               },
@@ -221,6 +223,23 @@ async function run() {
       );
       res.send(result);
     });
+
+    // temporary to update price field on appointment option
+    // app.get("/addPrice", async (req, res) => {
+    //   const filter = {};
+    //   const options = { upsert: true };
+    //   const updateDoc = {
+    //     $set: {
+    //       price: 99,
+    //     },
+    //   };
+    //   const result = await appointmentOptionCollection.updateMany(
+    //     filter,
+    //     updateDoc,
+    //     options
+    //   );
+    //   res.send(result);
+    // });
 
     app.get("/doctors", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
