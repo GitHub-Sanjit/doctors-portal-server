@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+// This is your test secret API key.
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
+
 var jwt = require("jsonwebtoken");
 const { query, response } = require("express");
 require("dotenv").config();
@@ -160,7 +163,7 @@ async function run() {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const booking = await bookingsCollection.findOne(query);
-      res.send(booking)
+      res.send(booking);
     });
 
     app.post("/bookings", async (req, res) => {
@@ -179,6 +182,28 @@ async function run() {
       }
       const result = await bookingsCollection.insertOne(booking);
       res.send(result);
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const booking = req.body;
+      const price = booking.price;
+      const amount = price * 100;
+
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        'payment_method_types': [
+          'card'
+        ],
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
     });
 
     app.get("/jwt", async (req, res) => {
