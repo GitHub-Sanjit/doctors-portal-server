@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -6,7 +7,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 var jwt = require("jsonwebtoken");
 const { query, response } = require("express");
-require("dotenv").config();
 const port = process.env.PORT || 5000;
 
 const app = express();
@@ -51,6 +51,9 @@ async function run() {
       .collection("bookings");
     const usersCollection = client.db("doctorsPortal").collection("users");
     const doctorsCollection = client.db("doctorsPortal").collection("doctors");
+    const paymentsCollection = client
+      .db("doctorsPortal")
+      .collection("payments");
 
     // middleware
     // NOTE: make sure you use verifyAdmin after verifyJWT
@@ -189,21 +192,32 @@ async function run() {
       const price = booking.price;
       const amount = price * 100;
 
-      // Create a PaymentIntent with the order amount and currency
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
         currency: "usd",
-        'payment_method_types': [
-          'card'
-        ],
-        automatic_payment_methods: {
-          enabled: true,
-        },
+        amount: amount,
+        payment_method_types: ["card"],
       });
-
       res.send({
         clientSecret: paymentIntent.client_secret,
       });
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId,
+        },
+      };
+      const updatedResult = await bookingsCollection.updateOne(
+        filter,
+        updatedDoc
+      );
+      res.send(result);
     });
 
     app.get("/jwt", async (req, res) => {
